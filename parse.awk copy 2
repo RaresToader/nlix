@@ -1,0 +1,31 @@
+#BEGIN { record = [] }
+
+/^[^\t]/ { flush(); ip = $1 }
+$1 == "BGP.as_path:"{$1 = ""; as_path = $0}
+$1 == "BGP.next_hop:" {next_hop = $2}
+$1 == "BGP.community:" {
+    $1 = ""
+    community = ""
+    for (i = 1; i <= NF; i++) {
+        community = community $i 
+        if (i < NF && i > 1) {
+            community = community ","
+        }
+    }
+}
+END { flush() }
+
+
+
+function flush() {
+   if (ip) {
+       split(ip, alpha, "/")
+       sub(/^ */, "", as_path)
+       gsub(/ /, ",", as_path)
+       gsub(/{,/, "", as_path)
+       gsub(/,}/, "", as_path)
+
+       printf "%s,%s,%s,\"%s\",\"%s\"\n", alpha[1], alpha[2], next_hop, as_path, community
+       ip = as_path = next_hop = community = ""
+   }
+}
